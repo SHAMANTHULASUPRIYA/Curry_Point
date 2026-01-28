@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Track Your Order</h1>
+    
+    <form method="POST" style="text-align: center; margin-bottom: 30px;">
+        <label>Enter Order ID:</label><br>
+        <input type="text" name="order_id" required style="padding: 10px; font-size: 16px; width: 200px;"><br><br>
+        <button type="submit" style="padding: 10px 20px; font-size: 16px;">Track Order</button>
+    </form>
+
+    {% if order %}
+        <div style="border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+            <h2>Order Details</h2>
+            <p><strong>Order ID:</strong> {{ order[0] }}</p>
+            <p><strong>Customer:</strong> {{ order[1] }}</p>
+            <p><strong>Items:</strong> {{ order[4] }}</p>
+            <p><strong>Total:</strong> ₹{{ order[5] }}</p>
+            <p><strong>Payment:</strong> {{ order[7] }}</p>
+            <p><strong>Order Date:</strong> {{ order[8] }}</p>
+            
+            <h3>Order Status</h3>
+            <div style="margin: 20px 0;">
+                {% if order[6] == 'Pending' %}
+                    <div style="color: orange; font-size: 18px;">🟡 Order Received - Preparing to cook</div>
+                    <p>Estimated time: 30-45 minutes</p>
+                {% elif order[6] == 'Preparing' %}
+                    <div style="color: blue; font-size: 18px;">🔵 Cooking in Progress</div>
+                    <p>Estimated time: 20-30 minutes</p>
+                {% elif order[6] == 'Ready' %}
+                    <div style="color: green; font-size: 18px;">🟢 Ready for Delivery</div>
+                    <p>Your order is packed and ready! Delivery in 10-15 minutes.</p>
+                {% elif order[6] == 'Delivered' %}
+                    <div style="color: green; font-size: 18px;">✅ Order Delivered Successfully</div>
+                    <p>Enjoy your meal! Thank you for choosing Supriya's Curry Point.</p>
+                    
+                    <!-- Review Form -->
+                    <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                        <h4>Rate Your Experience</h4>
+                        <form method="POST" action="{{ url_for('submit_review') }}">
+                            <input type="hidden" name="order_id" value="{{ order[0] }}">
+                            <input type="hidden" name="customer_name" value="{{ order[1] }}">
+                            
+                            <label>Rating:</label><br>
+                            <select name="rating" required style="padding: 8px; margin: 10px 0;">
+                                <option value="">Select Rating</option>
+                                <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+                                <option value="4">⭐⭐⭐⭐ Very Good</option>
+                                <option value="3">⭐⭐⭐ Good</option>
+                                <option value="2">⭐⭐ Fair</option>
+                                <option value="1">⭐ Poor</option>
+                            </select><br>
+                            
+                            <label>Comments (optional):</label><br>
+                            <textarea name="comment" rows="3" style="width: 100%; padding: 8px; margin: 10px 0;"></textarea><br>
+                            
+                            <button type="submit" style="padding: 10px 20px; background-color: #d84315; color: white; border: none; border-radius: 4px;">Submit Review</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                <h4>Order Timeline</h4>
+                <ul style="list-style: none; padding: 0;">
+                    <li style="margin: 5px 0;">📋 Order Placed ✓</li>
+                    <li style="margin: 5px 0; {% if order[6] in ['Preparing', 'Ready', 'Delivered'] %}color: green;{% endif %}">👨‍🍳 Preparing {% if order[6] in ['Preparing', 'Ready', 'Delivered'] %}✓{% endif %}</li>
+                    <li style="margin: 5px 0; {% if order[6] in ['Ready', 'Delivered'] %}color: green;{% endif %}">🚚 Ready for Delivery {% if order[6] in ['Ready', 'Delivered'] %}✓{% endif %}</li>
+                    <li style="margin: 5px 0; {% if order[6] == 'Delivered' %}color: green;{% endif %}">🏠 Delivered {% if order[6] == 'Delivered' %}✓{% endif %}</li>
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+    
+    {% if error %}
+        <p style="color: red; text-align: center;">{{ error }}</p>
+    {% endif %}
+{% endblock %}

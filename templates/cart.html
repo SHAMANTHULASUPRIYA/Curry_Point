@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Your Cart</h1>
+    {% if cart_items %}
+        {% for item in cart_items %}
+            <div class="menu-item">
+                <img src="{{ url_for('static', filename='images/' + item[2]) }}" alt="{{ item[0] }}">
+                <h2>{{ item[0] }}</h2>
+                <p class="price">₹{{ item[1] }}</p>
+            </div>
+        {% endfor %}
+        <a href="{{ url_for('order') }}">Proceed to Order</a>
+    {% else %}
+        <p>Your cart is empty.</p>
+    {% endif %}
+{% endblock %}
