@@ -4,9 +4,12 @@
     {% if cart_items %}
         {% for item in cart_items %}
             <div class="menu-item">
-                <img src="{{ url_for('static', filename='images/' + item[2]) }}" alt="{{ item[0] }}">
-                <h2>{{ item[0] }}</h2>
-                <p class="price">₹{{ item[1] }}</p>
+                <img src="{{ url_for('static', filename='images/' + item[3]) }}" alt="{{ item[1] }}">
+                <h2>{{ item[1] }}</h2>
+                <p class="price">₹{{ item[2] }} x {{ item[4] }} = ₹{{ item[2] * item[4] }}</p>
+                <form action="{{ url_for('remove_from_cart', item_id=item[0]) }}" method="post" style="margin-top:10px;">
+                    <button type="submit" style="background:#b53d12; color:#fff; border:none; border-radius:4px; padding:6px 14px; font-size:14px; cursor:pointer;">Remove</button>
+                </form>
             </div>
         {% endfor %}
         <a href="{{ url_for('order') }}">Proceed to Order</a>

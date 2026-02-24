@@ -1,3 +1,8 @@
+
+# (Route moved below app = Flask(__name__))
+
+
+    # (Route moved below app = Flask(__name__))
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_mail import Mail, Message
@@ -66,10 +71,19 @@ def send_notification(to_email, subject, body):
         print(f"Body:\n{body}")
         print("=" * 40)
 
+
 # ------------------ Home Page ------------------
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def home():
-    return render_template("home.html")
+    conn = sqlite3.connect("curry.db")
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, price, image_url FROM menu")
+    curries = [dict(id=row[0], name=row[1], price=row[2], image_url=row[3]) for row in cur.fetchall()]
+    conn.close()
+
+    # Cart logic
+    cart = session.get("cart", {})
+    return render_template("home.html", curries=curries, cart=cart)
 
 # ------------------ About Page ------------------
 @app.route("/about")
@@ -103,24 +117,45 @@ def menu():
     conn.close()
     return render_template("menu.html", items=menu_with_ratings)
 
-# ------------------ Add to Cart ------------------
-@app.route("/add_to_cart/<item_name>")
-def add_to_cart(item_name):
-    if "cart" not in session:
-        session["cart"] = []
-    session["cart"].append(item_name)
-    return redirect(url_for("cart"))
+
+# ------------------ Add to Cart (with quantity) ------------------
+@app.route("/add_to_cart/<int:curry_id>", methods=["POST"])
+def add_to_cart(curry_id):
+    # Get curry name by id
+    conn = sqlite3.connect("curry.db")
+    cur = conn.cursor()
+    cur.execute("SELECT name FROM menu WHERE id = ?", (curry_id,))
+    result = cur.fetchone()
+    conn.close()
+    if not result:
+        return redirect(url_for("home"))
+    curry_name = result[0]
+
+    cart = session.get("cart", {})
+    if curry_name in cart:
+        cart[curry_name] += 1
+    else:
+        cart[curry_name] = 1
+    session["cart"] = cart
+    return redirect(url_for("menu"))
+
 
 # ------------------ Cart Page ------------------
 @app.route("/cart")
 def cart():
     cart_items = []
-    if "cart" in session and session["cart"]:
+    cart = session.get("cart", {})
+    if cart:
         conn = sqlite3.connect("curry.db")
         cur = conn.cursor()
-        placeholders = ",".join("?" * len(session["cart"]))
-        cur.execute(f"SELECT name, price, image_url FROM menu WHERE name IN ({placeholders})", session["cart"])
-        cart_items = cur.fetchall()
+        names = list(cart.keys())
+        if names:
+            placeholders = ",".join(["?"] * len(names))
+            cur.execute(f"SELECT id, name, price, image_url FROM menu WHERE name IN ({placeholders})", names)
+            menu_items = cur.fetchall()
+            for item_id, name, price, image_url in menu_items:
+                quantity = cart.get(name, 0)
+                cart_items.append((item_id, name, price, image_url, quantity))
         conn.close()
     return render_template("cart.html", cart_items=cart_items)
 
@@ -134,26 +169,30 @@ def order():
         address = request.form["address"]
         payment_method = request.form["payment_method"]
 
-        if "cart" in session and session["cart"]:
+        cart = session.get("cart", {})
+        if cart:
             conn = sqlite3.connect("curry.db")
             cur = conn.cursor()
-            placeholders = ",".join("?" * len(session["cart"]))
-            cur.execute(f"SELECT name, price FROM menu WHERE name IN ({placeholders})", session["cart"])
-            cart_data = cur.fetchall()
-            items_str = ", ".join([item[0] for item in cart_data])
-            total = sum(item[1] for item in cart_data)
-            
+            names = list(cart.keys())
+            if names:
+                placeholders = ",".join(["?"] * len(names))
+                cur.execute(f"SELECT name, price FROM menu WHERE name IN ({placeholders})", names)
+                menu_items = cur.fetchall()
+                # items_str: "Paneer Butter Masala x2, Dal Fry x1"
+                items_str = ", ".join([f"{name} x{cart[name]}" for name, price in menu_items])
+                total = sum(price * cart[name] for name, price in menu_items)
+            else:
+                items_str = ""
+                total = 0
             cur.execute("INSERT INTO orders (name, phone, email, address, items, total, status, payment_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                         (name, phone, email, address, items_str, total, 'Pending', payment_method))
             order_id = cur.lastrowid
             conn.commit()
             conn.close()
-            
             # Send email to shop owner
             shop_subject = f"New Order #{order_id} - Supriya's Curry Point"
             shop_body = f"New Order Details:\n\nOrder ID: {order_id}\nCustomer: {name}\nPhone: {phone}\nEmail: {email}\nAddress: {address}\nItems: {items_str}\nTotal: ₹{total}\nPayment: {payment_method}"
             send_notification(SHOP_EMAIL, shop_subject, shop_body)
-            
             session.pop("cart", None)  # Clear cart after ordering
             return f"""
             <h2>Thank you {name}, your order has been placed!</h2>
@@ -265,6 +304,24 @@ def submit_review():
         return f"Thank you for your review! <a href='{url_for('menu')}'>Back to Menu</a>"
     
     return "Review submission failed"
+
+
+# ------------------ Remove from Cart (by id) ------------------
+@app.route("/remove_from_cart/<int:item_id>", methods=["POST"])
+def remove_from_cart(item_id):
+    cart = session.get("cart", {})
+    # Find the name for this id
+    conn = sqlite3.connect("curry.db")
+    cur = conn.cursor()
+    cur.execute("SELECT name FROM menu WHERE id = ?", (item_id,))
+    result = cur.fetchone()
+    conn.close()
+    if result:
+        item_name = result[0]
+        if item_name in cart:
+            cart.pop(item_name)
+            session["cart"] = cart
+    return redirect(url_for("cart"))
 
 # ------------------ Run App ------------------
 if __name__ == "__main__":
