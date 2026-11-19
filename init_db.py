@@ -58,6 +58,8 @@ cur.execute("INSERT INTO menu (name, price, image_url) VALUES (?, ?, ?)",
             ("Brinjal Curry", 75, "brinjal_curry.jpg"))
 cur.execute("INSERT INTO menu (name, price, image_url) VALUES (?, ?, ?)",
             ("Egg Curry", 90, "egg_curry.jpg"))
+cur.execute("INSERT INTO menu (name, price, image_url) VALUES (?, ?, ?)",
+            ("Tomato Curry", 150, "tomato_curry.webp"))
 
 conn.commit()
 conn.close()
