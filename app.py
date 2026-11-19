@@ -4,9 +4,12 @@
 
     # (Route moved below app = Flask(__name__))
 import sqlite3
+import mimetypes
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_mail import Mail, Message
 import re
+
+mimetypes.add_type("image/webp", ".webp")
 
 app = Flask(__name__)
 app.secret_key = "supriya_secret"  # Needed for cart sessions
